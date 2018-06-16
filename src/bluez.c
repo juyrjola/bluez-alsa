@@ -246,6 +246,43 @@ static void bluez_endpoint_select_configuration(GDBusMethodInvocation *inv, void
 	}
 #endif
 
+#if ENABLE_APTX_HD
+	case A2DP_CODEC_VENDOR_APTX_HD: {
+
+		if (size != sizeof(a2dp_aptx_hd_t)) {
+			error("Invalid capabilities size: %zu != %zu", size, sizeof(a2dp_aptx_hd_t));
+			goto fail;
+		}
+
+		a2dp_aptx_hd_t *cap = (a2dp_aptx_hd_t *)capabilities;
+
+		if (config.a2dp_force_44100 &&
+				cap->frequency & APTX_HD_SAMPLING_FREQ_44100)
+			cap->frequency = APTX_HD_SAMPLING_FREQ_44100;
+		else if (cap->frequency & APTX_HD_SAMPLING_FREQ_48000)
+			cap->frequency = APTX_HD_SAMPLING_FREQ_48000;
+		else if (cap->frequency & APTX_HD_SAMPLING_FREQ_44100)
+			cap->frequency = APTX_HD_SAMPLING_FREQ_44100;
+		else if (cap->frequency & APTX_HD_SAMPLING_FREQ_32000)
+			cap->frequency = APTX_HD_SAMPLING_FREQ_32000;
+		else if (cap->frequency & APTX_HD_SAMPLING_FREQ_16000)
+			cap->frequency = APTX_HD_SAMPLING_FREQ_16000;
+		else {
+			error("No supported sampling frequencies: %#x", cap->frequency);
+			goto fail;
+		}
+
+		if (cap->channel_mode & APTX_HD_CHANNEL_MODE_STEREO)
+			cap->channel_mode = APTX_HD_CHANNEL_MODE_STEREO;
+		else {
+			error("No supported channel modes: %#x", cap->channel_mode);
+			goto fail;
+		}
+
+		break;
+	}
+#endif
+
 	default:
 		debug("Endpoint path not supported: %s", path);
 		g_dbus_method_invocation_return_error(inv, G_DBUS_ERROR,
@@ -460,6 +497,33 @@ static int bluez_endpoint_set_configuration(GDBusMethodInvocation *inv, void *us
 				}
 
 				if (cap->channel_mode != APTX_CHANNEL_MODE_STEREO) {
+					error("Invalid configuration: %s", "Invalid channel mode");
+					goto fail;
+				}
+
+				break;
+			}
+#endif
+
+#if ENABLE_APTX_HD
+			case A2DP_CODEC_VENDOR_APTX_HD: {
+
+				if (size != sizeof(a2dp_aptx_hd_t)) {
+					error("Invalid configuration: %s", "Invalid size");
+					goto fail;
+				}
+
+				a2dp_aptx_hd_t *cap = (a2dp_aptx_hd_t *)capabilities;
+
+				if (cap->frequency != APTX_HD_SAMPLING_FREQ_16000 &&
+						cap->frequency != APTX_HD_SAMPLING_FREQ_32000 &&
+						cap->frequency != APTX_HD_SAMPLING_FREQ_44100 &&
+						cap->frequency != APTX_HD_SAMPLING_FREQ_48000) {
+					error("Invalid configuration: %s", "Invalid sampling frequency");
+					goto fail;
+				}
+
+				if (cap->channel_mode != APTX_HD_CHANNEL_MODE_STEREO) {
 					error("Invalid configuration: %s", "Invalid channel mode");
 					goto fail;
 				}
@@ -741,6 +805,10 @@ void bluez_register_a2dp(void) {
 #if ENABLE_AAC
 		bluez_register_a2dp_endpoint(BLUETOOTH_UUID_A2DP_SOURCE, BLUETOOTH_PROFILE_A2DP_SOURCE,
 				A2DP_CODEC_MPEG24, &bluez_a2dp_aac, sizeof(bluez_a2dp_aac));
+#endif
+#if ENABLE_APTX_HD
+		bluez_register_a2dp_endpoint(BLUETOOTH_UUID_A2DP_SOURCE, BLUETOOTH_PROFILE_A2DP_SOURCE,
+				A2DP_CODEC_VENDOR_APTX_HD, &bluez_a2dp_aptx_hd, sizeof(bluez_a2dp_aptx_hd));
 #endif
 #if ENABLE_APTX
 		bluez_register_a2dp_endpoint(BLUETOOTH_UUID_A2DP_SOURCE, BLUETOOTH_PROFILE_A2DP_SOURCE,

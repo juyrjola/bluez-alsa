@@ -158,6 +158,10 @@ const char *g_dbus_get_profile_object_path(enum bluetooth_profile profile, uint1
 		case A2DP_CODEC_VENDOR_APTX:
 			return "/A2DP/APTX/Source";
 #endif
+#if ENABLE_APTX_HD
+		case A2DP_CODEC_VENDOR_APTX_HD:
+			return "/A2DP/APTXHD/Source";
+#endif
 		default:
 			warn("Unsupported A2DP codec: %#x", codec);
 			return "/A2DP/Source";
@@ -177,6 +181,10 @@ const char *g_dbus_get_profile_object_path(enum bluetooth_profile profile, uint1
 #if ENABLE_APTX
 		case A2DP_CODEC_VENDOR_APTX:
 			return "/A2DP/APTX/Sink";
+#endif
+#if ENABLE_APTX_HD
+		case A2DP_CODEC_VENDOR_APTX_HD:
+			return "/A2DP/APTXHD/Sink";
 #endif
 		default:
 			warn("Unsupported A2DP codec: %#x", codec);
@@ -234,19 +242,23 @@ enum bluetooth_profile g_dbus_object_path_to_profile(const char *path) {
  * @return On success this function returns Bluetooth audio codec. If object
  *   path cannot be recognize, vendor codec is returned. */
 uint16_t g_dbus_object_path_to_a2dp_codec(const char *path) {
-	if (strncmp(path + 5, "/SBC", 4) == 0)
+	if (strncmp(path + 5, "/SBC/", 5) == 0)
 		return A2DP_CODEC_SBC;
 #if ENABLE_MP3
-	if (strncmp(path + 5, "/MPEG12", 7) == 0)
+	if (strncmp(path + 5, "/MPEG12/", 8) == 0)
 		return A2DP_CODEC_MPEG12;
 #endif
 #if ENABLE_AAC
-	if (strncmp(path + 5, "/MPEG24", 7) == 0)
+	if (strncmp(path + 5, "/MPEG24/", 8) == 0)
 		return A2DP_CODEC_MPEG24;
 #endif
 #if ENABLE_APTX
-	if (strncmp(path + 5, "/APTX", 5) == 0)
+	if (strncmp(path + 5, "/APTX/", 6) == 0)
 		return A2DP_CODEC_VENDOR_APTX;
+#endif
+#if ENABLE_APTX_HD
+	if (strncmp(path + 5, "/APTXHD/", 8) == 0)
+		return A2DP_CODEC_VENDOR_APTX_HD;
 #endif
 	return A2DP_CODEC_VENDOR;
 }
@@ -394,6 +406,10 @@ const char *bluetooth_profile_to_string(enum bluetooth_profile profile, uint16_t
 		case A2DP_CODEC_VENDOR_APTX:
 			return "A2DP Source (APT-X)";
 #endif
+#if ENABLE_APTX_HD
+		case A2DP_CODEC_VENDOR_APTX_HD:
+			return "A2DP Source (APT-X HD)";
+#endif
 		}
 		return "A2DP Source";
 	case BLUETOOTH_PROFILE_A2DP_SINK:
@@ -411,6 +427,10 @@ const char *bluetooth_profile_to_string(enum bluetooth_profile profile, uint16_t
 #if ENABLE_APTX
 		case A2DP_CODEC_VENDOR_APTX:
 			return "A2DP Sink (APT-X)";
+#endif
+#if ENABLE_APTX_HD
+		case A2DP_CODEC_VENDOR_APTX_HD:
+			return "A2DP Sink (APT-X HD)";
 #endif
 		}
 		return "A2DP Sink";

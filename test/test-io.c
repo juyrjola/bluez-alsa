@@ -46,6 +46,13 @@ static const a2dp_aptx_t config_aptx_44100_stereo = {
 	.channel_mode = APTX_CHANNEL_MODE_STEREO,
 };
 
+static const a2dp_aptx_hd_t config_aptx_hd_44100_stereo = {
+	.info.vendor_id = APTX_HD_VENDOR_ID,
+	.info.codec_id = APTX_HD_CODEC_ID,
+	.frequency = APTX_HD_SAMPLING_FREQ_44100,
+	.channel_mode = APTX_HD_CHANNEL_MODE_STEREO,
+};
+
 /**
  * Helper function for timed thread join.
  *
@@ -263,6 +270,26 @@ int test_a2dp_aptx(void) {
 }
 #endif
 
+#if ENABLE_APTX_HD
+int test_a2dp_aptx_hd(void) {
+
+	struct ba_transport transport = {
+		.profile = BLUETOOTH_PROFILE_A2DP_SOURCE,
+		.codec = A2DP_CODEC_VENDOR_APTX_HD,
+		.a2dp = {
+			.cconfig = (uint8_t *)&config_aptx_hd_44100_stereo,
+			.cconfig_size = sizeof(config_aptx_hd_44100_stereo),
+		},
+	};
+
+	transport.mtu_write = 60;
+	assert(test_a2dp_encoding(&transport, io_thread_a2dp_source_aptx_hd) == 0);
+	assert(test_warn_count == 0 && test_error_count == 0);
+
+	return 0;
+}
+#endif
+
 int main(void) {
 	test_run(test_a2dp_sbc_invalid_setup);
 	test_run(test_a2dp_sbc);
@@ -271,6 +298,9 @@ int main(void) {
 #endif
 #if ENABLE_APTX
 	test_run(test_a2dp_aptx);
+#endif
+#if ENABLE_APTX_HD
+	test_run(test_a2dp_aptx_hd);
 #endif
 	return 0;
 }

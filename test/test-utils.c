@@ -17,7 +17,7 @@ int test_dbus_profile_object_path(void) {
 
 	static const struct {
 		enum bluetooth_profile profile;
-		int16_t codec;
+		uint16_t codec;
 		const char *path;
 	} profiles[] = {
 		/* test null/invalid path */
@@ -40,6 +40,10 @@ int test_dbus_profile_object_path(void) {
 		{ BLUETOOTH_PROFILE_A2DP_SOURCE, A2DP_CODEC_VENDOR_APTX, "/A2DP/APTX/Source" },
 		{ BLUETOOTH_PROFILE_A2DP_SINK, A2DP_CODEC_VENDOR_APTX, "/A2DP/APTX/Sink" },
 #endif
+#if ENABLE_APTX_HD
+		{ BLUETOOTH_PROFILE_A2DP_SOURCE, A2DP_CODEC_VENDOR_APTX_HD, "/A2DP/APTXHD/Source" },
+		{ BLUETOOTH_PROFILE_A2DP_SINK, A2DP_CODEC_VENDOR_APTX_HD, "/A2DP/APTXHD/Sink" },
+#endif
 		/* test HSP/HFP profiles */
 		{ BLUETOOTH_PROFILE_HSP_HS, -1, "/HSP/Headset" },
 		{ BLUETOOTH_PROFILE_HSP_AG, -1, "/HSP/AudioGateway" },
@@ -53,9 +57,10 @@ int test_dbus_profile_object_path(void) {
 		const char *path = g_dbus_get_profile_object_path(profiles[i].profile, profiles[i].codec);
 		assert(strstr(profiles[i].path, path) == profiles[i].path);
 		assert(g_dbus_object_path_to_profile(profiles[i].path) == profiles[i].profile);
-		if (profiles[i].codec != -1)
+		if (profiles[i].codec != (uint16_t)-1) {
 			assert(g_dbus_object_path_to_a2dp_codec(profiles[i].path) == profiles[i].codec);
-	}
+
+	}}
 
 	return 0;
 }

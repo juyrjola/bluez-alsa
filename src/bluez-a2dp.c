@@ -119,3 +119,19 @@ const a2dp_aptx_t bluez_a2dp_aptx = {
 		APTX_SAMPLING_FREQ_48000,
 };
 #endif
+
+#if ENABLE_APTX_HD
+const a2dp_aptx_hd_t bluez_a2dp_aptx_hd = {
+	.info.vendor_id = APTX_HD_VENDOR_ID,
+	.info.codec_id = APTX_HD_CODEC_ID,
+	.channel_mode =
+		/* NOTE: Used apt-X library does not support
+		 *       single channel (mono) mode. */
+		APTX_HD_CHANNEL_MODE_STEREO,
+	.frequency =
+		APTX_HD_SAMPLING_FREQ_16000 |
+		APTX_HD_SAMPLING_FREQ_32000 |
+		APTX_HD_SAMPLING_FREQ_44100 |
+		APTX_HD_SAMPLING_FREQ_48000,
+};
+#endif

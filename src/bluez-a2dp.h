@@ -27,5 +27,8 @@ const a2dp_aac_t bluez_a2dp_aac;
 #if ENABLE_APTX
 const a2dp_aptx_t bluez_a2dp_aptx;
 #endif
+#if ENABLE_APTX_HD
+const a2dp_aptx_hd_t bluez_a2dp_aptx_hd;
+#endif
 
 #endif
