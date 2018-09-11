@@ -95,6 +95,11 @@ static int io_thread_create(struct ba_transport *t) {
 				routine = io_thread_a2dp_sink_aac;
 				break;
 #endif
+#if ENABLE_LDAC
+			case A2DP_CODEC_VENDOR_LDAC:
+				routine = io_thread_a2dp_sink_dump;
+				break;
+#endif
 			default:
 				warn("Codec not supported: %u", t->codec);
 			}

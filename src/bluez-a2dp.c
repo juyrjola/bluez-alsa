@@ -322,6 +322,7 @@ static const struct bluez_a2dp_codec a2dp_codec_sink_ldac = {
 static const struct bluez_a2dp_codec *a2dp_codecs[] = {
 #if ENABLE_LDAC
 	&a2dp_codec_source_ldac,
+	&a2dp_codec_sink_ldac,
 #endif
 #if ENABLE_APTX
 	&a2dp_codec_source_aptx,
