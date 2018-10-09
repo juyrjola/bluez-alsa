@@ -20,6 +20,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
@@ -35,6 +36,7 @@
 #endif
 #if ENABLE_LDAC
 # include <ldacBT.h>
+# include <ldacBT_abr.h>
 #endif
 
 #include "a2dp-codecs.h"
@@ -1173,13 +1175,21 @@ void *io_thread_a2dp_source_ldac(void *arg) {
 	pthread_cleanup_push(PTHREAD_CLEANUP(transport_pthread_cleanup), t);
 
 	HANDLE_LDAC_BT handle;
+	HANDLE_LDAC_ABR handle_abr;
 
 	if ((handle = ldacBT_get_handle()) == NULL) {
 		error("Couldn't open LDAC encoder: %s", strerror(errno));
-		goto fail_open;
+		goto fail_open_ldac;
 	}
 
 	pthread_cleanup_push(PTHREAD_CLEANUP(ldacBT_free_handle), handle);
+
+	if ((handle_abr = ldac_ABR_get_handle()) == NULL) {
+		error("Couldn't open LDAC ABR: %s", strerror(errno));
+		goto fail_open_ldac_abr;
+	}
+
+	pthread_cleanup_push(PTHREAD_CLEANUP(ldac_ABR_free_handle), handle_abr);
 
 	const unsigned int channels = transport_get_channels(t);
 	const unsigned int samplerate = transport_get_sampling(t);
@@ -1188,6 +1198,15 @@ void *io_thread_a2dp_source_ldac(void *arg) {
 	if (ldacBT_init_handle_encode(handle, t->mtu_write - RTP_HEADER_LEN - sizeof(rtp_media_header_t),
 				config.ldac_eqmid, cconfig->channel_mode, LDACBT_SMPL_FMT_S16, samplerate) == -1) {
 		error("Couldn't initialize LDAC encoder: %s", ldacBT_strerror(ldacBT_get_error_code(handle)));
+		goto fail_init;
+	}
+
+	if (ldac_ABR_Init(handle_abr, 1000 * ldac_pcm_samples / channels / samplerate) == -1) {
+		error("Couldn't initialize LDAC ABR");
+		goto fail_init;
+	}
+	if (ldac_ABR_set_thresholds(handle_abr, 6, 4, 2) == -1) {
+		error("Couldn't set LDAC ABR thresholds");
 		goto fail_init;
 	}
 
@@ -1210,6 +1229,16 @@ void *io_thread_a2dp_source_ldac(void *arg) {
 	uint16_t seq_number = ntohs(rtp_header->seq_number);
 	uint32_t timestamp = ntohl(rtp_header->timestamp);
 	size_t ts_frames = 0;
+
+	/* In order to run ABR processor we have to know how many LDAC frames are
+	 * still in the output queue. There is an ioctl(), which can obtain the
+	 * number of bytes in the output buffer. However, the returned value is
+	 * not equal to the number of written bytes, but it is rounded up to the
+	 * nearest memory page (?) size. Since LDAC encoder produces frames with
+	 * a constant length, we can calculate the number of stalled frames by
+	 * dividing the number of bytes in the output buffer by the number of
+	 * bytes for a single LDAC frame (single socket packet). */
+	int bt_seqpack_size = -1;
 
 	int poll_timeout = -1;
 	struct asrsync asrs = { .frames = 0 };
@@ -1311,6 +1340,17 @@ void *io_thread_a2dp_source_ldac(void *arg) {
 				error("BT socket write error: %s", strerror(errno));
 			}
 
+			if (config.ldac_abr) {
+				int len = 0;
+				if (ioctl(t->bt_fd, TIOCOUTQ, &len) == -1)
+					warn("Couldn't get BT queued bytes: %s", strerror(errno));
+				if (bt_seqpack_size == -1 && len > 0)
+					/* save packet size for a single LDAC frame */
+					bt_seqpack_size = len;
+				if (bt_seqpack_size != -1)
+					ldac_ABR_Proc(handle, handle_abr, len / bt_seqpack_size, 1);
+			}
+
 			pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
 			/* keep data transfer at a constant bit rate */
@@ -1341,7 +1381,9 @@ fail:
 	pthread_cleanup_pop(1);
 fail_init:
 	pthread_cleanup_pop(1);
-fail_open:
+fail_open_ldac_abr:
+	pthread_cleanup_pop(1);
+fail_open_ldac:
 	pthread_cleanup_pop(1);
 	return NULL;
 }

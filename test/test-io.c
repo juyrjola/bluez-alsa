@@ -293,12 +293,15 @@ int main(void) {
 	test_run(test_a2dp_sbc_invalid_setup);
 	test_run(test_a2dp_sbc);
 #if ENABLE_AAC
+	config.aac_afterburner = true;
 	test_run(test_a2dp_aac);
 #endif
 #if ENABLE_APTX
 	test_run(test_a2dp_aptx);
 #endif
 #if ENABLE_LDAC
+	config.ldac_abr = true;
+	config.ldac_eqmid = LDACBT_EQMID_HQ;
 	test_run(test_a2dp_ldac);
 #endif
 	return 0;
